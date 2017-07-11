@@ -6,6 +6,7 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilenames
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askdirectory
+
 import subprocess
 import configparser
 
@@ -48,7 +49,7 @@ class GUI(ttk.Frame):
         # global style changes
         style.configure(".", background='#333333', foreground='white', anchor="center")
         # Button style changes
-        style.map("TButton", background=[('hover', '#222222')])
+        style.map("TButton", background=[('active', 'orange'), ('hover', '#222222')])
         style.map("TMenubutton", background=[('hover', '#222222')])
         style.map("TEntry", foreground=[('focus', 'blue2'), ('active', 'green2')])
         style.map("TCheckbutton", background=[('hover', '#222222')])
@@ -60,21 +61,19 @@ class GUI(ttk.Frame):
         intro['text'] = "Browse files to compress"
         intro.grid(column=0, row=2, rowspan=1, columnspan=3, sticky='NWES', padx=5, pady=20)
 
-        self.browse_files = ttk.Button(self, text="Add Files", command=self.load_files, width=10)
+        self.browse_files = ttk.Button(self, text="Add Files", command=self.load_files, width=10, state='active')
+        #self.browse_files.config['backgound'] = '#ffffff'
         self.browse_files.grid(column=0, row=3, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
 
         self.files_window = Choices(self)
         self.files_window.grid(column=0, row=4, columnspan=3, sticky='N', padx=5, pady=5)
 
-        self.rem_selected = ttk.Button(self, text="Remove Selected", command=self.remove_selected, width=10)
-        self.rem_selected.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+        #self.compress_option = tk.StringVar(self)
+        #self.compress_option.set("Select Type")
+        #option = ttk.OptionMenu(self, self.compress_option, "Compression Type", *COMPRESS_TYPE)
+        #option.grid(column=2, row=3, sticky='E', padx=5, pady=5)
 
-        self.compress_option = tk.StringVar(self)
-        self.compress_option.set("Select Type")
-        option = ttk.OptionMenu(self, self.compress_option, "Compression Type", *COMPRESS_TYPE)
-        option.grid(column=2, row=3, sticky='WENS', padx=5, pady=5)
-
-        self.browse_folder = ttk.Button(self, text="Output Folder", command=self.load_output_dir, width=10)
+        self.browse_folder = ttk.Button(self, text="Output Folder", command=self.load_output_dir, width=10, state='active')
         self.browse_folder.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
 
         self.output_location = ttk.Label(self, font=("Courier", 12))
@@ -107,7 +106,7 @@ class GUI(ttk.Frame):
         self.master.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
     def load_files(self):
-        self.fnames = askopenfilenames()
+        self.fnames = askopenfilenames(title='Select files',  initialdir='~/')
 
         for file in self.fnames:
             if file not in FILES:
@@ -116,7 +115,8 @@ class GUI(ttk.Frame):
         self.update_file_window()
 
     def load_output_dir(self):
-        self.output_dir = askdirectory()
+        self.output_dir = askdirectory(title="Select A Folder", mustexist=1, initialdir='~/')
+
         output_text = self.output_dir
         if len(self.output_dir) > 26:
             output_text = "..." + self.output_dir[-26:]
@@ -126,6 +126,19 @@ class GUI(ttk.Frame):
         self.files_window.destroy()
         self.files_window = Choices(self)
         self.files_window.grid(column=0, row=4, columnspan=3, sticky='N', padx=5, pady=5)
+
+        if len(self.files_window.item_id) >= 1:
+            try:
+                self.rem_selected.destroy()
+            except:
+                pass
+            self.rem_selected = ttk.Button(self, text="Remove Selected", command=self.remove_selected, width=10)
+            self.rem_selected.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+        else:
+            try:
+                self.rem_selected.destroy()
+            except:
+                pass
 
     def compress(self):
         print("compress")
