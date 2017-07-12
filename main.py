@@ -6,9 +6,9 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilenames
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askdirectory
-
-import subprocess
-import configparser
+from tkinter.filedialog import asksaveasfilename
+import os
+import zipfile
 
 FILES = []
 COMPRESS_TYPE = ['zip', 'tar.gz']
@@ -28,14 +28,14 @@ class Choices(ScrolledText):
             self.insert(tk.END, '\n')
             var += 1
 
-        self.config(state=tk.DISABLED, width=65, height=17, background='#999999')
+        self.config(state=tk.DISABLED, width=70, height=17, background='#999999')
 
 
 class GUI(ttk.Frame):
     def __init__(self, master):
         ttk.Frame.__init__(self, master)
 
-        self.center(500, 425)
+        self.center('master', 525, 355)
         self.master.configure(background='#333333')
         self.master.title("Compression Tool")
 
@@ -57,13 +57,15 @@ class GUI(ttk.Frame):
         heading = ttk.Label(self, text="Compression Tool", font=("Courier", 20))
         heading.grid(column=0, row=1, rowspan=1, columnspan=3, sticky='NWES')
 
-        intro = ttk.Label(self, font=("Courier", 16))
-        intro['text'] = "Browse files to compress"
-        intro.grid(column=0, row=2, rowspan=1, columnspan=3, sticky='NWES', padx=5, pady=20)
+        #intro = ttk.Label(self, font=("Courier", 16))
+        #intro['text'] = "Browse files to compress"
+        #intro.grid(column=0, row=2, rowspan=1, columnspan=3, sticky='NWES', padx=5, pady=20)
 
         self.browse_files = ttk.Button(self, text="Add Files", command=self.load_files, width=10, state='active')
-        #self.browse_files.config['backgound'] = '#ffffff'
-        self.browse_files.grid(column=0, row=3, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
+        self.browse_files.grid(column=0, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+
+        self.browse_folders = ttk.Button(self, text="Add Folders", command=self.load_folders, width=10, state='active')
+        self.browse_folders.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
 
         self.files_window = Choices(self)
         self.files_window.grid(column=0, row=4, columnspan=3, sticky='N', padx=5, pady=5)
@@ -73,8 +75,8 @@ class GUI(ttk.Frame):
         #option = ttk.OptionMenu(self, self.compress_option, "Compression Type", *COMPRESS_TYPE)
         #option.grid(column=2, row=3, sticky='E', padx=5, pady=5)
 
-        self.browse_folder = ttk.Button(self, text="Output Folder", command=self.load_output_dir, width=10, state='active')
-        self.browse_folder.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
+        self.output_dir = ttk.Button(self, text="Output Dir", command=self.load_output_dir, width=10, state='active')
+        self.output_dir.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
 
         self.output_location = ttk.Label(self, font=("Courier", 12))
         self.output_location['text'] = "No folder selected"
@@ -91,7 +93,7 @@ class GUI(ttk.Frame):
         #exit_button = ttk.Button(self, text="Exit", command=self.exit)
         #exit_button.grid(column=0, row=9, sticky='N')
 
-    def center(self, width, height):
+    def center(self, win, width, height):
         """center the window on the screen"""
         # get screen width and height
         ws = self.master.winfo_screenwidth()  # width of the screen
@@ -103,7 +105,10 @@ class GUI(ttk.Frame):
 
         # set the dimensions of the screen
         # and where it is placed
-        self.master.geometry('%dx%d+%d+%d' % (width, height, x, y))
+        if win == 'master':
+            self.master.geometry('%dx%d+%d+%d' % (width, height, x, y))
+        if win == 'popup':
+            self.top.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
     def load_files(self):
         self.fnames = askopenfilenames(title='Select files',  initialdir='~/')
@@ -114,12 +119,18 @@ class GUI(ttk.Frame):
 
         self.update_file_window()
 
+    def load_folders(self):
+        folder = askdirectory(title='Select folders', initialdir='~/')
+        FILES.append(folder)
+
+        self.update_file_window()
+
     def load_output_dir(self):
-        self.output_dir = askdirectory(title="Select A Folder", mustexist=1, initialdir='~/')
+        self.output_dir = asksaveasfilename(title="Select A Folder", filetypes = [("zip folder","*.zip")], initialdir='~/')
 
         output_text = self.output_dir
-        if len(self.output_dir) > 26:
-            output_text = "..." + self.output_dir[-26:]
+        if len(self.output_dir) > 28:
+            output_text = "..." + self.output_dir[-28:]
         self.output_location['text'] = output_text
 
     def update_file_window(self):
@@ -133,7 +144,7 @@ class GUI(ttk.Frame):
             except:
                 pass
             self.rem_selected = ttk.Button(self, text="Remove Selected", command=self.remove_selected, width=10)
-            self.rem_selected.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+            self.rem_selected.grid(column=2, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
         else:
             try:
                 self.rem_selected.destroy()
@@ -142,6 +153,44 @@ class GUI(ttk.Frame):
 
     def compress(self):
         print("compress")
+        print(FILES)
+        print("Output dir: " + self.output_dir)
+
+        zip_f = zipfile.ZipFile(self.output_dir, 'w')
+        for item in FILES:
+            if os.path.isdir(item):
+                for root, dirs, files in os.walk(item):
+                    for filename in files:
+                        zip_f.write(os.path.join(root, filename))
+            elif os.path.isfile(item):
+                zip_f.write(item)
+        zip_f.close()
+        self.confirm()
+
+    def confirm(self):
+        self.top = tk.Toplevel()
+        self.send_email = tk.IntVar()
+        self.center('popup', 190, 100)
+        if os.path.isfile(self.output_dir):
+            self.center('popup', 190, 100)
+            self.top.title("Success!")
+            msg = tk.Label(self.top, text='Zip file created successfully!')
+            msg.grid(column=1, row=1, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
+            email = tk.Checkbutton(self.top, text="Send via email?", variable=self.send_email)
+            email.grid(column=1, row=2, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
+            exit = tk.Button(self.top, text="Exit", command=self.exit)
+            exit.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+            cont = tk.Button(self.top, text="Continue", command=self.top.destroy)
+            cont.grid(column=2, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+        else:
+            self.center('popup', 250, 100)
+            self.top.title("Failure to create Zip file")
+            msg = tk.Label(self.top, text='Check that you have permission to ' + self.output_dir, wraplength=250)
+            msg.grid(column=1, row=1, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
+            exit = tk.Button(self.top, text="Exit", command=self.exit)
+            exit.grid(column=1, row=2, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+            cont = tk.Button(self.top, text="Continue", command=self.top.destroy)
+            cont.grid(column=2, row=2, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
 
     def remove_selected(self):
         files = self.files_window.item_id
@@ -153,9 +202,14 @@ class GUI(ttk.Frame):
                 self.files_window.item_id.pop(item)
 
         self.update_file_window()
-
+    def send_mail(self):
+        print(self.send_email.get())
+        if self.send_email.get():
+            command = 'thunderbird -compose attachment="' + self.output_dir + '"'
+            os.system(command)
 
     def exit(self):
+        self.send_mail()
         quit()
 
 
@@ -163,4 +217,4 @@ if __name__ == '__main__':
     root = tk.Tk()
     window = GUI(root)
     window.pack(fill=tk.X, expand=True, anchor=tk.N)
-root.mainloop()
+    root.mainloop()
