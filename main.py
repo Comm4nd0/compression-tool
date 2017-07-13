@@ -68,7 +68,7 @@ class GUI(ttk.Frame):
         # global style changes
         style.configure(".", background='#333333', foreground='white', anchor="center")
         # Button style changes
-        style.map("TButton", background=[('active', 'orange'), ('hover', '#222222')])
+        style.map("TButton", background=[('hover', '#222222'), ('alternate', 'orange')])
         style.map("TMenubutton", background=[('hover', '#222222')])
         style.map("TEntry", foreground=[('focus', 'blue2'), ('active', 'green2')])
         style.map("TCheckbutton", background=[('hover', '#222222')])
@@ -85,7 +85,7 @@ class GUI(ttk.Frame):
         self.files_window = Choices(self)
         self.files_window.grid(column=0, row=4, columnspan=3, sticky='N', padx=5, pady=5)
 
-        self.output_button = ttk.Button(self, text="Output Dir", command=self.load_output_dir, width=10, state='active')
+        self.output_button = ttk.Button(self, text="Save As", command=self.load_output_dir, width=10, state='active')
         self.output_button.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
 
         self.output_location = ttk.Label(self, font=("Courier", 12))
@@ -157,10 +157,6 @@ class GUI(ttk.Frame):
                 pass
 
     def compress(self):
-        print("compress")
-        print(FILES)
-        print("Output dir: " + self.output_dir)
-
         zip_f = zipfile.ZipFile(self.output_dir, 'w')
         for item in FILES:
             if os.path.isdir(item):
@@ -168,7 +164,7 @@ class GUI(ttk.Frame):
                     for filename in files:
                         zip_f.write(os.path.join(root, filename))
             elif os.path.isfile(item):
-                zip_f.write(item)
+                zip_f.write(item, os.path.basename(item))
         zip_f.close()
         self.confirm()
 
@@ -214,13 +210,13 @@ class GUI(ttk.Frame):
     def check_status(self):
         filename, file_extension = os.path.splitext(self.output_dir)
         if len(FILES) > 0 and file_extension == ".zip":
-            self.compress_button.config(state='active')
+            self.compress_button.config(state='alternate')
         else:
             self.compress_button.config(state='disabled')
 
     def send_mail(self):
         if self.send_email.get():
-            command = 'thunderbird -compose attachment="' + self.output_dir + '"'
+            command = '/usr/bin/thunderbird -compose attachment="' + self.output_dir + '" &'
             os.system(command)
         self.top.destroy()
 
