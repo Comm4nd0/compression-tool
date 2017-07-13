@@ -7,11 +7,12 @@ from tkinter.filedialog import askopenfilenames
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askdirectory
 from tkinter.filedialog import asksaveasfilename
+from hurry.filesize import size
 import os
 import zipfile
 
+ICON = '@zip2.xbm'
 FILES = []
-COMPRESS_TYPE = ['zip', 'tar.gz']
 
 class Choices(ScrolledText):
     def __init__(self, master=None, **kwargs):
@@ -21,6 +22,21 @@ class Choices(ScrolledText):
 
     def create_files_window(self, master):
         var = 0
+        if len(FILES) > 0:
+            total_size = 0
+
+            for file in FILES:
+                if os.path.isfile(file):
+                    total_size += os.path.getsize(file)
+                elif os.path.isdir(file):
+                    for root, dirs, files in os.walk(file):
+                        for item in files:
+                            total_size += os.path.getsize(root + "/" + item)
+
+            topbar_text = str(len(FILES)) + ' items added | ' + str(size(total_size)) + ' Total Size'
+            self.topbar = tk.Label(text=topbar_text)
+            self.window_create(tk.END, window=self.topbar)
+            self.insert(tk.END, '\n')
         for file in FILES:
             self.item_id[var] = tk.BooleanVar(master)
             check_box = tk.Checkbutton(self, text=file, variable=self.item_id[var], bg='#999999', fg='#222222', selectcolor='#ffffff', borderwidth=3, highlightthickness=0)
@@ -38,10 +54,13 @@ class GUI(ttk.Frame):
         self.center('master', 525, 355)
         self.master.configure(background='#333333')
         self.master.title("Compression Tool")
-
+        #img = tk.PhotoImage(file='zip2.xbm')
+        self.master.iconbitmap(ICON)
         # causes the full width of the window to be used
         self.columnconfigure(2, weight=1)
         self.columnconfigure(1, weight=1)
+
+        self.output_dir = ''
         self.make_UI()
 
     def make_UI(self):
@@ -57,10 +76,6 @@ class GUI(ttk.Frame):
         heading = ttk.Label(self, text="Compression Tool", font=("Courier", 20))
         heading.grid(column=0, row=1, rowspan=1, columnspan=3, sticky='NWES')
 
-        #intro = ttk.Label(self, font=("Courier", 16))
-        #intro['text'] = "Browse files to compress"
-        #intro.grid(column=0, row=2, rowspan=1, columnspan=3, sticky='NWES', padx=5, pady=20)
-
         self.browse_files = ttk.Button(self, text="Add Files", command=self.load_files, width=10, state='active')
         self.browse_files.grid(column=0, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
 
@@ -70,28 +85,15 @@ class GUI(ttk.Frame):
         self.files_window = Choices(self)
         self.files_window.grid(column=0, row=4, columnspan=3, sticky='N', padx=5, pady=5)
 
-        #self.compress_option = tk.StringVar(self)
-        #self.compress_option.set("Select Type")
-        #option = ttk.OptionMenu(self, self.compress_option, "Compression Type", *COMPRESS_TYPE)
-        #option.grid(column=2, row=3, sticky='E', padx=5, pady=5)
-
-        self.output_dir = ttk.Button(self, text="Output Dir", command=self.load_output_dir, width=10, state='active')
-        self.output_dir.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
+        self.output_button = ttk.Button(self, text="Output Dir", command=self.load_output_dir, width=10, state='active')
+        self.output_button.grid(column=0, row=5, rowspan=1, columnspan=1, sticky='N', padx=5, pady=5)
 
         self.output_location = ttk.Label(self, font=("Courier", 12))
         self.output_location['text'] = "No folder selected"
         self.output_location.grid(column=1, row=5, rowspan=1, columnspan=3, sticky='W', padx=5, pady=5)
 
-        self.compress_button = ttk.Button(self, text="Compress", command=self.compress, width=10)
+        self.compress_button = ttk.Button(self, text="Compress", command=self.compress, width=10, state='disabled')
         self.compress_button.grid(column=2, row=5, rowspan=1, columnspan=1, sticky='E', padx=5, pady=5)
-
-        #self.no_files = ttk.Label(self, font=("Courier", 12))
-        #self.no_files['text'] = "No files selected"
-        #self.no_files.grid(column=0, row=4, rowspan=1, columnspan=3, sticky='NWES', padx=5, pady=20)
-
-        # EXIT
-        #exit_button = ttk.Button(self, text="Exit", command=self.exit)
-        #exit_button.grid(column=0, row=9, sticky='N')
 
     def center(self, win, width, height):
         """center the window on the screen"""
@@ -118,12 +120,14 @@ class GUI(ttk.Frame):
                 FILES.append(file)
 
         self.update_file_window()
+        self.check_status()
 
     def load_folders(self):
         folder = askdirectory(title='Select folders', initialdir='~/')
         FILES.append(folder)
 
         self.update_file_window()
+        self.check_status()
 
     def load_output_dir(self):
         self.output_dir = asksaveasfilename(title="Select A Folder", filetypes = [("zip folder","*.zip")], initialdir='~/')
@@ -132,6 +136,7 @@ class GUI(ttk.Frame):
         if len(self.output_dir) > 28:
             output_text = "..." + self.output_dir[-28:]
         self.output_location['text'] = output_text
+        self.check_status()
 
     def update_file_window(self):
         self.files_window.destroy()
@@ -171,6 +176,7 @@ class GUI(ttk.Frame):
         self.top = tk.Toplevel()
         self.send_email = tk.IntVar()
         self.center('popup', 190, 100)
+        self.top.iconbitmap(ICON)
         if os.path.isfile(self.output_dir):
             self.center('popup', 190, 100)
             self.top.title("Success!")
@@ -180,8 +186,9 @@ class GUI(ttk.Frame):
             email.grid(column=1, row=2, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
             exit = tk.Button(self.top, text="Exit", command=self.exit)
             exit.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
-            cont = tk.Button(self.top, text="Continue", command=self.top.destroy)
+            cont = tk.Button(self.top, text="Continue", command=self.send_mail)
             cont.grid(column=2, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+
         else:
             self.center('popup', 250, 100)
             self.top.title("Failure to create Zip file")
@@ -202,11 +209,20 @@ class GUI(ttk.Frame):
                 self.files_window.item_id.pop(item)
 
         self.update_file_window()
+        self.check_status()
+
+    def check_status(self):
+        filename, file_extension = os.path.splitext(self.output_dir)
+        if len(FILES) > 0 and file_extension == ".zip":
+            self.compress_button.config(state='active')
+        else:
+            self.compress_button.config(state='disabled')
+
     def send_mail(self):
-        print(self.send_email.get())
         if self.send_email.get():
             command = 'thunderbird -compose attachment="' + self.output_dir + '"'
             os.system(command)
+        self.top.destroy()
 
     def exit(self):
         self.send_mail()
