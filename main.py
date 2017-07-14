@@ -138,11 +138,12 @@ class GUI(ttk.Frame):
 
     # Ask user for folders then append to the global FILES var
     def load_folders(self):
-        folder = askdirectory(title='Select folders', initialdir='~/')
-        FILES.append(folder)
+        self.folder = askdirectory(title='Select folder', initialdir='~/')
+        if self.folder not in FILES and self.folder:
+            FILES.append(self.folder)
 
-        self.update_file_window()
-        self.check_status()
+            self.update_file_window()
+            self.check_status()
 
     # Ask user where to save the zip folder that will be created
     def load_output_dir(self):
@@ -175,7 +176,7 @@ class GUI(ttk.Frame):
 
     # Create the zip file
     def compress(self):
-        zip_f = zipfile.ZipFile(self.output_dir, 'w')
+        zip_f = zipfile.ZipFile(self.output_dir, 'w', zipfile.ZIP_DEFLATED)
         for item in FILES:
             if os.path.isdir(item):
                 for root, dirs, files in os.walk(item):
@@ -191,6 +192,7 @@ class GUI(ttk.Frame):
         self.top = tk.Toplevel()
         self.send_email = tk.IntVar()
         self.center('popup', 190, 100)
+        self.top.lift(aboveThis=root)
         img = tk.Image("photo", file=ICON)
         self.tk.call('wm', 'iconphoto', root._w, img)
         if os.path.isfile(self.output_dir):
