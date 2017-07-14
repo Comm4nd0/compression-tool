@@ -11,42 +11,53 @@ from hurry.filesize import size
 import os
 import zipfile
 
-ICON = '@zip2.xbm'
+ICON = 'zip.gif'
 FILES = []
 
 class Choices(ScrolledText):
     def __init__(self, master=None, **kwargs):
         super().__init__(master, cursor="arrow", **kwargs)
         self.item_id = {}
+        self.total_size = 0
         self.create_files_window(master)
 
+    # Window for displaying files and folders and some header info about the contents
     def create_files_window(self, master):
         var = 0
         if len(FILES) > 0:
-            total_size = 0
-
             for file in FILES:
                 if os.path.isfile(file):
-                    total_size += os.path.getsize(file)
+                    self.total_size += os.path.getsize(file)
                 elif os.path.isdir(file):
-                    for root, dirs, files in os.walk(file):
-                        for item in files:
-                            total_size += os.path.getsize(root + "/" + item)
-
-            topbar_text = str(len(FILES)) + ' items added | ' + str(size(total_size)) + ' Total Size'
+                    self.total_size = self.iter_dirs(file)
+            # insert top bar into window
+            topbar_text = str(len(FILES)) + ' items added | ' + str(size(self.total_size)) + ' Total Size'
             self.topbar = tk.Label(text=topbar_text)
             self.window_create(tk.END, window=self.topbar)
             self.insert(tk.END, '\n')
+        # insert check boxes, file name and their sizes into window
         for file in FILES:
             self.item_id[var] = tk.BooleanVar(master)
-            check_box = tk.Checkbutton(self, text=file, variable=self.item_id[var], bg='#999999', fg='#222222', selectcolor='#ffffff', borderwidth=3, highlightthickness=0)
+            if os.path.isfile(file):
+                text = file + " | " + str(size(os.path.getsize(file)))
+            elif os.path.isdir(file):
+                self.folder_size = self.iter_dirs(file)
+                text = file + " | " + str(size(self.folder_size))
+            check_box = tk.Checkbutton(self, text=text, variable=self.item_id[var], bg='#999999', fg='#222222', selectcolor='#ffffff', borderwidth=3, highlightthickness=0)
             self.window_create(tk.END, window=check_box, )
             self.insert(tk.END, '\n')
             var += 1
 
         self.config(state=tk.DISABLED, width=70, height=17, background='#999999')
 
+    def iter_dirs(self, file):
+        size = 0
+        for root, dirs, files in os.walk(file):
+            for item in files:
+                size += os.path.getsize(root + "/" + item)
+        return size
 
+# the GUI main class
 class GUI(ttk.Frame):
     def __init__(self, master):
         ttk.Frame.__init__(self, master)
@@ -54,8 +65,8 @@ class GUI(ttk.Frame):
         self.center('master', 525, 355)
         self.master.configure(background='#333333')
         self.master.title("Compression Tool")
-        #img = tk.PhotoImage(file='zip2.xbm')
-        self.master.iconbitmap(ICON)
+        img = tk.Image("photo", file=ICON)
+        self.tk.call('wm','iconphoto',root._w,img)
         # causes the full width of the window to be used
         self.columnconfigure(2, weight=1)
         self.columnconfigure(1, weight=1)
@@ -63,6 +74,7 @@ class GUI(ttk.Frame):
         self.output_dir = ''
         self.make_UI()
 
+    # Generate the UI and set some global styles
     def make_UI(self):
         style = ttk.Style()
         # global style changes
@@ -95,6 +107,7 @@ class GUI(ttk.Frame):
         self.compress_button = ttk.Button(self, text="Compress", command=self.compress, width=10, state='disabled')
         self.compress_button.grid(column=2, row=5, rowspan=1, columnspan=1, sticky='E', padx=5, pady=5)
 
+    # Center the window to the dimensions of the screen
     def center(self, win, width, height):
         """center the window on the screen"""
         # get screen width and height
@@ -112,6 +125,7 @@ class GUI(ttk.Frame):
         if win == 'popup':
             self.top.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
+    # ask user to browse files then append them to the global FILES var
     def load_files(self):
         self.fnames = askopenfilenames(title='Select files',  initialdir='~/')
 
@@ -122,6 +136,7 @@ class GUI(ttk.Frame):
         self.update_file_window()
         self.check_status()
 
+    # Ask user for folders then append to the global FILES var
     def load_folders(self):
         folder = askdirectory(title='Select folders', initialdir='~/')
         FILES.append(folder)
@@ -129,6 +144,7 @@ class GUI(ttk.Frame):
         self.update_file_window()
         self.check_status()
 
+    # Ask user where to save the zip folder that will be created
     def load_output_dir(self):
         self.output_dir = asksaveasfilename(title="Select A Folder", filetypes = [("zip folder","*.zip")], initialdir='~/')
 
@@ -138,6 +154,7 @@ class GUI(ttk.Frame):
         self.output_location['text'] = output_text
         self.check_status()
 
+    # Destroy and create the file window with and changes made
     def update_file_window(self):
         self.files_window.destroy()
         self.files_window = Choices(self)
@@ -156,6 +173,7 @@ class GUI(ttk.Frame):
             except:
                 pass
 
+    # Create the zip file
     def compress(self):
         zip_f = zipfile.ZipFile(self.output_dir, 'w')
         for item in FILES:
@@ -168,11 +186,13 @@ class GUI(ttk.Frame):
         zip_f.close()
         self.confirm()
 
+    # Generate a popup window the the result of the created zip folder
     def confirm(self):
         self.top = tk.Toplevel()
         self.send_email = tk.IntVar()
         self.center('popup', 190, 100)
-        self.top.iconbitmap(ICON)
+        img = tk.Image("photo", file=ICON)
+        self.tk.call('wm', 'iconphoto', root._w, img)
         if os.path.isfile(self.output_dir):
             self.center('popup', 190, 100)
             self.top.title("Success!")
@@ -195,6 +215,7 @@ class GUI(ttk.Frame):
             cont = tk.Button(self.top, text="Continue", command=self.top.destroy)
             cont.grid(column=2, row=2, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
 
+    # Remove the ticked items from the files window
     def remove_selected(self):
         files = self.files_window.item_id
         offset = 0
@@ -207,6 +228,7 @@ class GUI(ttk.Frame):
         self.update_file_window()
         self.check_status()
 
+    # Check the GUI state to decide if all the relevant information has been entered
     def check_status(self):
         filename, file_extension = os.path.splitext(self.output_dir)
         if len(FILES) > 0 and file_extension == ".zip":
@@ -214,16 +236,17 @@ class GUI(ttk.Frame):
         else:
             self.compress_button.config(state='disabled')
 
+    # Open Thunderbird attach the zip folder to a new mail
     def send_mail(self):
         if self.send_email.get():
             command = '/usr/bin/thunderbird -compose attachment="' + self.output_dir + '" &'
             os.system(command)
         self.top.destroy()
 
+    # exit the program
     def exit(self):
         self.send_mail()
         quit()
-
 
 if __name__ == '__main__':
     root = tk.Tk()
