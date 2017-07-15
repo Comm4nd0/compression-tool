@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter.filedialog import askopenfilenames
@@ -29,7 +30,7 @@ class Choices(ScrolledText):
                 if os.path.isfile(file):
                     self.total_size += os.path.getsize(file)
                 elif os.path.isdir(file):
-                    self.total_size = self.iter_dirs(file)
+                    self.total_size += self.iter_dirs(file)
             # insert top bar into window
             topbar_text = str(len(FILES)) + ' items added | ' + str(size(self.total_size)) + ' Total Size'
             self.topbar = tk.Label(text=topbar_text)
@@ -196,16 +197,19 @@ class GUI(ttk.Frame):
         img = tk.Image("photo", file=ICON)
         self.tk.call('wm', 'iconphoto', root._w, img)
         if os.path.isfile(self.output_dir):
-            self.center('popup', 190, 100)
+            self.center('popup', 190, 125)
             self.top.title("Success!")
             msg = tk.Label(self.top, text='Zip file created successfully!')
             msg.grid(column=1, row=1, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
+            res_text = "Before: " + str(size(self.files_window.total_size)) + " After: " + str(size(os.path.getsize(self.output_dir)))
+            results = tk.Label(self.top, text=res_text)
+            results.grid(column=1, row=2, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
             email = tk.Checkbutton(self.top, text="Send via email?", variable=self.send_email)
-            email.grid(column=1, row=2, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
+            email.grid(column=1, row=3, rowspan=1, columnspan=2, sticky='WENS', padx=5, pady=5)
             exit = tk.Button(self.top, text="Exit", command=self.exit)
-            exit.grid(column=1, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+            exit.grid(column=1, row=4, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
             cont = tk.Button(self.top, text="Continue", command=self.send_mail)
-            cont.grid(column=2, row=3, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
+            cont.grid(column=2, row=4, rowspan=1, columnspan=1, sticky='WENS', padx=5, pady=5)
 
         else:
             self.center('popup', 250, 100)
